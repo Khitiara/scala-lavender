@@ -15,7 +15,7 @@ class LvInterpreter {
     case LvUndefined => Applicative[Unravel].pure(LvUndefined)
     case i@LvInt(_) => Applicative[Unravel].pure(i)
     case f@LvFloat(_) => Applicative[Unravel].pure(f)
-    case LvVect(vec, size) => vec.toList.traverse(interpret).map(_.toIndexedSeq).map(LvVect(_, size))
+    case v@LvVect(_, _) => Applicative[Unravel].pure(v)
     case LvFunc(ByName(name)) => getFunc(name).map(_.map(LvFunc).getOrElse(LvUndefined))
       .flatMap(unravel)
     case f@LvFunc(_) => Applicative[Unravel].pure(f)
