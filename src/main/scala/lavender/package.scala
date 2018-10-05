@@ -1,7 +1,9 @@
 import cats.data.Reader
-import lavender.expr.LvExpression
+import lavender.expr.{LvExpression, LvLiteral}
 import lavender.repr.{LvFunctionHandle, LvObject}
 import lavender.util.SnowflakeType
+
+import scala.language.implicitConversions
 
 package object lavender {
 
@@ -14,6 +16,9 @@ package object lavender {
   }
 
   type LvNativeFunc = Array[LvObject] => LvExpression
+  type LvNativeFunc1 = Array[LvObject] => LvObject
+
+  implicit def wrap(f: LvNativeFunc1): LvNativeFunc = f.andThen(LvLiteral)
 
   type Unravel[A] = Reader[LvEnvironment, A]
 

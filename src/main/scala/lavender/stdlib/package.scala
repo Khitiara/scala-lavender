@@ -249,5 +249,6 @@ package object stdlib {
 
       val v = vec.dropWhile(run)
       LvVect(v, v.size)
+    case _ => LvUndefined
   }
 }
