@@ -41,7 +41,7 @@ class LvInterpreter {
       case LvParameter(i) if i.value < parameters.size => Eval.now(parameters(i.value))
       case LvParameter(i) if i.value >= parameters.size => Eval.now(capture(i.value - parameters.size))
       case LvLiteral(lit) => Eval.now(lit)
-      case LvCall(ByCode(code, arity), argV) if argV.size == arity =>
+      case LvCall(ByCode(_, code, arity), argV) if argV.size == arity =>
         foldArgs(argV).flatMap(args => interpretCall(code, args, parameters ++ capture, env))
       case LvCall(ByName(name, arity), argV) if argV.size == arity =>
         interpretCall(LvCall(env.lvFuncs(name), argV), parameters, capture, env)

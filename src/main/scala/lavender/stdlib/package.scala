@@ -4,16 +4,13 @@ import java.math.BigInteger
 
 import lavender.expr.{LvCall, LvExpression, LvLiteral}
 import lavender.interpret.LvInterpreter
+import lavender.repr.LvFunctionHandle.{ByCode, ByName, ByNative}
 import lavender.repr._
 
 import scala.collection.immutable
 import scala.util.Try
 
 package object stdlib {
-  def complete(f: PartialFunction[Array[LvObject], LvObject])(args: Array[LvObject]): LvObject =
-    f.applyOrElse(args, _ => LvUndefined)
-
-
   def defined(args: LvObject*): LvObject = LvInt(if (args(0) != LvUndefined) 1 else 0)
 
   def undefined(args: LvObject*): LvObject = LvUndefined
@@ -42,7 +39,9 @@ package object stdlib {
     case LvUndefined => "<undefined>"
     case LvFloat(float) => float.toString
     case LvInt(int) => int.toString()
-    case LvFunc(fun) => ???
+    case LvFunc(ByName(name, arity)) => s"$name${Array.fill(arity)("_").mkString("(", ", ", ")")}"
+    case LvFunc(ByNative(name, arity)) => s"$name${Array.fill(arity)("_").mkString("(", ", ", ")")}"
+    case LvFunc(ByCode(name, _, arity)) => s"$name${Array.fill(arity)("_").mkString("(", ", ", ")")}"
     case LvVect(vec, _) => vec.map(lvInterpreter.interpret)
       .map(_.run(environment)).map(toStr).mkString("{ ", ", ", " }")
   }
