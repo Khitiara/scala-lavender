@@ -6,17 +6,18 @@ import scala.collection.immutable
 
 package object repr {
 
-  sealed trait LvObject
+  sealed abstract class LvObject(val typ: Int)
 
-  case class LvString(str: String) extends LvObject
+  case class LvString(str: String) extends LvObject(2)
 
-  case class LvVect(vec: immutable.IndexedSeq[LvExpression], size: Int) extends LvObject
+  case class LvVect(vec: immutable.IndexedSeq[LvExpression], size: Int) extends LvObject(3)
 
-  case class LvFunc(fun: LvFunctionHandle) extends LvObject
+  case class LvFunc(fun: LvFunctionHandle) extends LvObject(4)
 
-  case object LvUndefined extends LvObject
+  case class LvInt(int: BigInt) extends LvObject(5)
 
-  case class LvInt(int: BigInt) extends LvObject
+  case class LvFloat(float: Double) extends LvObject(1)
 
-  case class LvFloat(float: BigDecimal) extends LvObject
+  case object LvUndefined extends LvObject(0)
+
 }

@@ -1,6 +1,6 @@
 import cats.data.Reader
-import lavender.LvEnvironment.LvNativeFunc
-import lavender.repr.LvFunctionHandle
+import lavender.expr.LvExpression
+import lavender.repr.{LvFunctionHandle, LvObject}
 import lavender.util.SnowflakeType
 
 package object lavender {
@@ -12,6 +12,8 @@ package object lavender {
   object FunctionName {
     def apply(s: String): FunctionName = SnowflakeType[FunctionTag](s)
   }
+
+  type LvNativeFunc = Array[LvObject] => LvExpression
 
   type Unravel[A] = Reader[LvEnvironment, A]
 
