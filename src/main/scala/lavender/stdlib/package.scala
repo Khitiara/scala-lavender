@@ -14,7 +14,7 @@ package object stdlib {
     f.applyOrElse(args, _ => LvUndefined)
 
 
-  def defined(args: LvObject*): LvObject = LvInt(if (args(0) == LvUndefined) 1 else 0)
+  def defined(args: LvObject*): LvObject = LvInt(if (args(0) != LvUndefined) 1 else 0)
 
   def undefined(args: LvObject*): LvObject = LvUndefined
 
