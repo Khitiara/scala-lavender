@@ -51,7 +51,7 @@ object lvmath {
 
   def _ceil: LvNativeFunc = lift1(ceil)
   def _floor: LvNativeFunc = lift1(floor)
-  def _round: LvNativeFunc = lift1(round)
+  def _round: LvNativeFunc = lift1(round(_).toDouble)
 
 
   def _abs(args: LvObject*): LvObject = args(0) match {
@@ -63,6 +63,7 @@ object lvmath {
   def _sgn(args: LvObject*): LvObject = args(0) match {
     case LvFloat(f) => if (f < 0) LvInt(-1) else if (f == 0) LvInt(0) else LvInt(1)
     case LvInt(i) => if (i < 0) LvInt(-1) else if (i == 0) LvInt(0) else LvInt(1)
+    case _ => LvUndefined
   }
 
   //@formatter:on
