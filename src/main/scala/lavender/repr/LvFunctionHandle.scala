@@ -12,7 +12,7 @@ object LvFunctionHandle {
 
   case class ByName(name: FunctionName, arity: Int) extends LvFunctionHandle
 
-  case class ByCode(name: FunctionName, code: LvExpression, arity: Int) extends LvFunctionHandle
+  case class ByCode(name: FunctionName, code: LvExpression, arity: Int, capture: IndexedSeq[LvExpression]) extends LvFunctionHandle
 
   case class ByNative(name: FunctionName, arity: Int) extends LvFunctionHandle
 

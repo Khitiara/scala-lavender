@@ -29,24 +29,22 @@ class LvInterpreter {
     trace(LvCall(fun, args.toIndexedSeq)).map(post).run(env)
   }
 
-  def interpret(expr: LvExpression): Unravel[LvObject] = Reader(env =>
-    interpretCall(expr, IndexedSeq.empty, IndexedSeq.empty, env).value)
+  def interpret(expr: LvExpression): Unravel[LvObject] = Reader(interpretCall(expr, IndexedSeq.empty, IndexedSeq.empty, _).value)
 
-  private def interpretCall(expr: LvExpression, parameters: IndexedSeq[LvObject], capture: IndexedSeq[LvObject], env: LvEnvironment): Eval[LvObject] = {
+  private def interpretCall(expr: LvExpression, parameters: IndexedSeq[LvExpression], capture: IndexedSeq[LvExpression], env: LvEnvironment): Eval[LvObject] = {
 
     def foldArgs(argV: IndexedSeq[LvExpression]): Eval[IndexedSeq[LvObject]] =
-      argV.toList.foldLeftM(IndexedSeq.empty[LvObject]) { case (as, a) => interpretCall(a, parameters, capture, env).map(as :+ _) }
+      argV.toList.traverse(interpretCall(_, parameters, capture, env)).map(_.toIndexedSeq)
 
     expr match {
-      case LvParameter(i) if i.value < parameters.size => Eval.now(parameters(i.value))
-      case LvParameter(i) if i.value >= parameters.size => Eval.now(capture(i.value - parameters.size))
+      case LvParameter(i) if i.value < parameters.size => Eval.defer(interpretCall(parameters(i.value), parameters, capture, env))
+      case LvParameter(i) if i.value >= parameters.size => Eval.defer(interpretCall(capture(i.value - parameters.size), parameters, capture, env))
       case LvLiteral(lit) => Eval.now(lit)
-      case LvCall(ByCode(_, code, arity), argV) if argV.size == arity =>
-        foldArgs(argV).flatMap(args => interpretCall(code, args, parameters ++ capture, env))
+      case LvCall(ByCode(_, code, arity, cap), argV) if argV.size == arity => interpretCall(code, argV, cap, env)
       case LvCall(ByName(name, arity), argV) if argV.size == arity =>
         interpretCall(LvCall(env.lvFuncs(name), argV), parameters, capture, env)
-      case LvCall(ByNative(name, arity), argV) if argV.size == arity =>
-        foldArgs(argV).map(_.toArray).map(env.nativeFuncs(name)).flatMap(interpretCall(_, parameters, capture, env))
+      case LvCall(ByNative(name, arity, cap), argV) if argV.size == arity =>
+        foldArgs(argV ++ cap).map(_.toArray).map(env.nativeFuncs(name)).flatMap(interpretCall(_, parameters, capture, env))
 
     }
   }
