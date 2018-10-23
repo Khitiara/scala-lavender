@@ -7,8 +7,6 @@ import cats.effect.IO
 import cats.implicits._
 import lavender.parse.Lexer._
 import lavender.parse.TokenType._
-
-import scala.annotation.tailrec
 import scala.io.Codec
 
 /**
