@@ -1,39 +1,46 @@
 package lavender.interpret
 
+import cats.Eval
 import cats.data.Reader
-import cats.{Applicative, Eval}
 import cats.implicits._
 import lavender._
 import lavender.expr._
 import lavender.repr.LvFunctionHandle.{ByCode, ByName, ByNative}
 import lavender.repr._
 
+/**
+  * Interpreter for lavender expressions.
+  * Maintains an internal counter used for giving a name to anonymous function declarations
+  */
 class LvInterpreter {
+  /**
+    * A tree visitor running on a trampoline, this method recursively interprets lavender expressions.
+    *
+    * @param expr the [[LvExpression]] to interpret
+    * @return A reader monad which represents the act of interpreting this expression with an arbitrary [[LvEnvironment]]
+    */
+  def trace(expr: LvExpression): Unravel[LvObject] = Reader(interpretCall(expr, IndexedSeq.empty, IndexedSeq.empty, _).value)
 
-  def unravel(obj: LvObject): Unravel[LvObject] = obj match {
-    case s@LvString(_) => Applicative[Unravel].pure(s)
-    case LvUndefined => Applicative[Unravel].pure(LvUndefined)
-    case i@LvInt(_) => Applicative[Unravel].pure(i)
-    case f@LvFloat(_) => Applicative[Unravel].pure(f)
-    case v@LvVect(_, _) => Applicative[Unravel].pure(v)
-    case LvFunc(ByName(name, _)) => getFunc(name).map(_.map(LvFunc).getOrElse(LvUndefined))
-      .flatMap(unravel)
-    case f@LvFunc(_) => Applicative[Unravel].pure(f)
-  }
-
-  def trace(expr: LvExpression): Unravel[LvObject] = interpret(expr).flatMap(unravel)
-
+  /**
+    * Shortcut for [[trace]]ing a function call, created at this time
+    *
+    * @param fun  A handle to the function to be called
+    * @param args The arguments to be passed to the function
+    * @param post A processor to convert the output object
+    * @param env  The environment in which to run this
+    * @tparam A The desided type of the java output
+    * @return The result of the lavender function call
+    */
   def traceCall[A](fun: LvFunctionHandle, args: LvExpression*)(post: LvObject => A)(env: LvEnvironment): A = {
     if (args.length != fun.arity)
       throw LvInterpreterException("Invalid arity for function called by native code")
     trace(LvCall(fun, args.toIndexedSeq)).map(post).run(env)
   }
 
-  def interpret(expr: LvExpression): Unravel[LvObject] = Reader(interpretCall(expr, IndexedSeq.empty, IndexedSeq.empty, _).value)
 
   private var anonFnCounter: Int = 0
 
-  def anonFunctionName(): FunctionName = {
+  private def anonFunctionName(): FunctionName = {
     anonFnCounter += 1
     FunctionName(s"anon$$$anonFnCounter")
   }
@@ -41,12 +48,12 @@ class LvInterpreter {
   /**
     * A tree visitor running on a trampoline, this method recursively interprets lavender expressions
     *
-    * @param expr       The expression to evaluate
+    * @param expr       The [[LvExpression]] to evaluate
     * @param parameters The expressions of parameters of the current method invocation
     * @param capture    The expressions of any captured information
     * @param env        The object representing the environment in which we interpret.
     *                   Used for fetching function declarations for function calls
-    * @return A trampoline
+    * @return A trampoline which, when unwound, evaluates to an [[LvObject]]
     */
   private def interpretCall(expr: LvExpression, parameters: IndexedSeq[LvExpression], capture: IndexedSeq[LvExpression], env: LvEnvironment): Eval[LvObject] = {
 

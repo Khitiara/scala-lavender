@@ -1,15 +1,17 @@
 package lavender.parse
 
-import java.io.InputStreamReader
-import java.nio.file.{Files, Path}
+import java.io.{Closeable, InputStream, InputStreamReader}
 
-import cats.implicits._
 import cats.effect.IO
+import cats.implicits._
 import lavender.parse.Lexer._
 import lavender.parse.TokenType._
 
 import scala.io.Codec
 
+/**
+  * Companion object to [[Lexer]], holds basic utility methods for checking for certain kinds of input
+  */
 object Lexer {
   def isidbgn(ch: Char): Boolean = ch.isLetter || ch == '_'
 
@@ -18,9 +20,14 @@ object Lexer {
   def isident(ch: Char): Boolean = isidbgn(ch) || ch.isDigit
 }
 
+/**
+  * A lexer which tokenizes an input according to the lavender spec
+  *
+  * @param source The input source to read from
+  */
 //noinspection AccessorLikeMethodIsUnit
 //We use the same naming convention as clavender, so suppress the warnings about naming things
-class Lexer(path: Path) {
+class Lexer(source: InputStream) extends Closeable {
   type Lex = Option[Token]
 
   private def err(t: String): Lex = throw LvLexerException(t)
@@ -36,7 +43,7 @@ class Lexer(path: Path) {
     cs
   }
 
-  private lazy val charReader: InputStreamReader = new InputStreamReader(Files.newInputStream(path), Codec.UTF8.charSet)
+  private lazy val charReader: InputStreamReader = new InputStreamReader(source, Codec.UTF8.charSet)
   private var contents: Array[Char] = Array.emptyCharArray
   private var idx = 0
   private var checkedShebang: Boolean = false
@@ -74,6 +81,9 @@ class Lexer(path: Path) {
     s
   }
 
+  /**
+    * Creates a continual stream of [[Token]], which will terminate when EOF is reached
+    */
   def tokenStream: IO[Stream[Token]] = Stream.continually(nextTok()).sequence[IO, Option[Token]]
     .map(_.takeWhile(_.nonEmpty).map(_.get))
 
@@ -232,7 +242,7 @@ class Lexer(path: Path) {
   }
 
   private def read: Lex = {
-    if(isEoi)
+    if (isEoi)
       return None
     next()
     if (!checkedShebang) {
@@ -275,4 +285,5 @@ class Lexer(path: Path) {
       someToken
     }
   }
+  override def close(): Unit = charReader.close()
 }
