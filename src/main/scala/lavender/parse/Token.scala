@@ -19,7 +19,6 @@ case object TokenType extends Enum[TokenType] with CatsEnum[TokenType] {
   object STRING extends TokenType
   object ELLIPSES extends TokenType
   object EMPTY_ARGS extends TokenType
-  object LITERAL extends TokenType
 
   override val values: immutable.IndexedSeq[TokenType] = findValues
 }

@@ -2,11 +2,13 @@ package lavender.parse
 
 import java.io.{Closeable, InputStream, InputStreamReader}
 
+import cats.Eval
 import cats.effect.IO
 import cats.implicits._
 import lavender.parse.Lexer._
 import lavender.parse.TokenType._
 
+import scala.annotation.tailrec
 import scala.io.Codec
 
 /**
@@ -37,7 +39,7 @@ class Lexer(source: InputStream) extends Closeable {
   private def pullBuf(max: Int): Array[Char] = {
     val arr: Array[Char] = new Array(max)
     val n = charReader.read(arr)
-    if (n < 0) return Array('\u0000')
+    if (n <= 0) return Array('\u0000')
     val cs = new Array[Char](n)
     Array.copy(arr, 0, cs, 0, n)
     cs
@@ -58,9 +60,10 @@ class Lexer(source: InputStream) extends Closeable {
   private var tokenType: TokenType = _
 
   private def next(): Char = {
-    if (idx >= contents.length)
-      contents = pullBuf(64)
-    buf.append(ch)
+    if (idx >= contents.length - 2)
+      contents = Array.concat(contents, pullBuf(64))
+    else
+      buf.append(ch)
     idx += 1
     ch
   }
@@ -70,13 +73,13 @@ class Lexer(source: InputStream) extends Closeable {
   private def rewind(): Unit = {
     idx -= buf.size
     if (idx < 0) {
-      contents = Array.concat(buf.take(-idx).toArray, contents)
+      contents = Array.concat(buf.takeRight(idx).toArray, contents)
     }
     discard()
   }
 
   private def pull(): String = {
-    val s = buf.mkString
+    val s = buf.drop(1).mkString
     discard()
     s
   }
@@ -87,9 +90,11 @@ class Lexer(source: InputStream) extends Closeable {
   def tokenStream: IO[Stream[Token]] = Stream.continually(nextTok()).sequence[IO, Option[Token]]
     .map(_.takeWhile(_.nonEmpty).map(_.get))
 
-  def nextTok(): IO[Option[Token]] = IO(read)
+  def nextTok(): IO[Option[Token]] = IO.eval(read)
 
-  private def pullWhile(f: Char => Boolean): Unit = while (f(next())) {}
+  private def pullWhile(f: Char => Boolean): Unit = {
+    while (f(next())) {}
+  }
 
   private def discardLine(): Unit = {
     while (ch != '\n') next()
@@ -210,20 +215,25 @@ class Lexer(source: InputStream) extends Closeable {
         next()
         if (isEoi)
           err("UNTERM_STR")
+      } else {
+        next()
       }
     } while (ch != '"')
     next() // Consume closing quote
     tokenType = STRING
   }
 
-  private def tryGetEmptyArgs(): Unit = {
+  private def tryGetEmptyArgs(): Boolean = {
     assert(ch == '(')
     next()
     if (ch == ')') {
       tokenType = EMPTY_ARGS
+      buf.append(' ')
+      true
     } else {
       rewind()
       getLiteral()
+      false
     }
   }
 
@@ -239,12 +249,14 @@ class Lexer(source: InputStream) extends Closeable {
     }
     if (parenNesting < 0 || braceNesting < 0 || bracketNesting < 0)
       err("UNBAL_PAREN")
+    discard()
   }
 
-  private def read: Lex = {
-    if (isEoi)
-      return None
+  private def read: Eval[Lex] = {
+    discard()
     next()
+    if (isEoi)
+      return Eval.now(None)
     if (!checkedShebang) {
       if (ch == '#') {
         next()
@@ -257,10 +269,10 @@ class Lexer(source: InputStream) extends Closeable {
     }
     if (ch == '\'') {
       discardLine()
-      read
+      return Eval.defer(read)
     } else if (ch.isWhitespace) {
       discard()
-      read
+      return Eval.defer(read)
     } else if (isidbgn(ch)) {
       tryGetFuncSym()
     } else if (issymb(ch)) {
@@ -273,14 +285,19 @@ class Lexer(source: InputStream) extends Closeable {
       getFuncVal()
     } else if (ch == '"') {
       getString()
-    } else if (ch == '(') {
-      tryGetEmptyArgs()
+    } else if (ch == '(' || (idx >= 1 && contents(idx - 1) == '(')) {
+      if (ch != '(')
+        idx -= 1
+      if (!tryGetEmptyArgs())
+        return Eval.defer(read)
     } else {
       getLiteral()
     }
 
     {
-      val someToken = Some(Token(pull(), tokenType))
+      if (tokenType == null)
+        return Eval.defer(read)
+      val someToken = Eval.now(Some(Token(pull(), tokenType)))
       tokenType = null
       someToken
     }

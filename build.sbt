@@ -15,5 +15,7 @@ libraryDependencies ++= Seq(
   "com.chuusai" %% "shapeless" % "2.3.3",
   "com.beachape" %% "enumeratum" % "1.5.13",
   "com.beachape" %% "enumeratum-cats" % "1.5.14",
-  "org.typelevel" %% "cats-effect" % "1.0.0"
+  "org.typelevel" %% "cats-effect" % "1.0.0",
+
+  "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 )

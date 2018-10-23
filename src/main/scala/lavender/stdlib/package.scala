@@ -36,7 +36,7 @@ package object stdlib {
     case LvFloat(float) => float.toString
     case LvInt(int) => int.toString()
     case LvFunc(LvFunctionHandle(name, arity)) => s"$name${Array.fill(arity)("_").mkString("(", ", ", ")")}"
-    case LvVect(vec, _) => vec.map(lvInterpreter.interpret)
+    case LvVect(vec, _) => vec.map(lvInterpreter.trace)
       .map(_.run(environment)).map(toStr).mkString("{ ", ", ", " }")
   }
 
@@ -74,9 +74,9 @@ package object stdlib {
     case (LvFloat(fa), LvFloat(fb)) => fa == fb
     case (LvInt(ia), LvInt(ib)) => ia == ib
     case (LvString(sa), LvString(sb)) => sa == sb
-    case (LvFunc(funa), LvFunc(funb)) => funa == funb // TODO: This probably doesnt work
-    case (LvVect(va, sa), LvVect(vb, sb)) => sa == sb && va.map(lvInterpreter.interpret).map(_.run(environment))
-      .zip(vb.map(lvInterpreter.interpret).map(_.run(environment))).forall { case (x, y) => equal(x, y) } // This is so dumb, sorry
+    case (LvFunc(funa), LvFunc(funb)) => funa.name == funb.name && funa.arity == funb.arity
+    case (LvVect(va, sa), LvVect(vb, sb)) => sa == sb && va.map(lvInterpreter.trace).map(_.run(environment))
+      .zip(vb.map(lvInterpreter.trace).map(_.run(environment))).forall { case (x, y) => equal(x, y) } // This is so dumb, sorry
     case _ => false
   }
 
@@ -90,8 +90,8 @@ package object stdlib {
     case (LvString(x), LvString(y)) => x < y
     case (LvVect(xv, xs), LvVect(yv, ys)) => if (xs == ys) {
       for (i <- 0 until xs) {
-        val x = lvInterpreter.interpret(xv(i)).run(environment)
-        val y = lvInterpreter.interpret(yv(i)).run(environment)
+        val x = lvInterpreter.trace(xv(i)).run(environment)
+        val y = lvInterpreter.trace(yv(i)).run(environment)
         if (!equal(x, y))
           return ltImpl(x, y)
       }
