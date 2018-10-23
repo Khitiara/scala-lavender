@@ -4,7 +4,7 @@ import cats.data.Reader
 import cats.{Applicative, Eval}
 import cats.implicits._
 import lavender._
-import lavender.expr.{LvCall, LvExpression, LvLiteral, LvParameter}
+import lavender.expr._
 import lavender.repr.LvFunctionHandle.{ByCode, ByName, ByNative}
 import lavender.repr._
 
@@ -31,6 +31,23 @@ class LvInterpreter {
 
   def interpret(expr: LvExpression): Unravel[LvObject] = Reader(interpretCall(expr, IndexedSeq.empty, IndexedSeq.empty, _).value)
 
+  private var anonFnCounter: Int = 0
+
+  def anonFunctionName(): FunctionName = {
+    anonFnCounter += 1
+    FunctionName(s"anon$$$anonFnCounter")
+  }
+
+  /**
+    * A tree visitor running on a trampoline, this method recursively interprets lavender expressions
+    *
+    * @param expr       The expression to evaluate
+    * @param parameters The expressions of parameters of the current method invocation
+    * @param capture    The expressions of any captured information
+    * @param env        The object representing the environment in which we interpret.
+    *                   Used for fetching function declarations for function calls
+    * @return A trampoline
+    */
   private def interpretCall(expr: LvExpression, parameters: IndexedSeq[LvExpression], capture: IndexedSeq[LvExpression], env: LvEnvironment): Eval[LvObject] = {
 
     def foldArgs(argV: IndexedSeq[LvExpression]): Eval[IndexedSeq[LvObject]] =
@@ -45,7 +62,8 @@ class LvInterpreter {
         interpretCall(LvCall(env.lvFuncs(name), argV), parameters, capture, env)
       case LvCall(ByNative(name, arity, cap), argV) if argV.size == arity =>
         foldArgs(argV ++ cap).map(_.toArray).map(env.nativeFuncs(name)).flatMap(interpretCall(_, parameters, capture, env))
-
+      case LvDecl(code, name, arity) =>
+        Eval.now(LvFunc(ByCode(name.getOrElse(anonFunctionName()), code, arity, parameters ++ capture)))
     }
   }
 }

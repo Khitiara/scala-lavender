@@ -25,4 +25,5 @@ package object expr {
   case class LvCall(ptr: LvFunctionHandle, argV: IndexedSeq[LvExpression]) extends LvExpression
   case class LvLiteral(lit:  LvObject) extends LvExpression
   case class LvParameter(i: Int Refined NonNegative) extends LvExpression
+  case class LvDecl(code: LvExpression, name: Option[FunctionName], arity: Int) extends LvExpression
 }
