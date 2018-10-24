@@ -11,9 +11,10 @@ object LexerTesting {
     val src =
       """
         | def blah(x) => x + "hi there \n\" peoples of the world!"
+        | ' blahblahblahblahJ(()WU#(*RH#HWq23o
         |
         | @import blah
-        | def glargle(x, y) => def() => x + y
+        | def glargleflargle(x, y) => def () => x + y
       """.stripMargin
     val source = new ByteArrayInputStream(Codec.toUTF8(src))
     val lexer = new Lexer(source)
