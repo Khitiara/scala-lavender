@@ -16,6 +16,10 @@ libraryDependencies ++= Seq(
   "com.beachape" %% "enumeratum" % "1.5.13",
   "com.beachape" %% "enumeratum-cats" % "1.5.14",
   "org.typelevel" %% "cats-effect" % "1.0.0",
+  "org.tpolecat" %% "atto-core" % "0.6.4",
+  "org.tpolecat" %% "atto-fs2" % "0.6.4",
+  "co.fs2" %% "fs2-core" % "1.0.0",
+  "co.fs2" %% "fs2-io" % "1.0.0",
 
   "org.scalatest" %% "scalatest" % "3.0.5" % "test"
 )

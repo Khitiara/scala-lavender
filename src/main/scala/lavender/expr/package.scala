@@ -26,4 +26,5 @@ package object expr {
   case class LvLiteral(lit:  LvObject) extends LvExpression
   case class LvParameter(i: Int Refined NonNegative) extends LvExpression
   case class LvDecl(code: LvExpression, name: Option[FunctionName], arity: Int) extends LvExpression
+  case class LvGuard(value: List[(LvExpression, LvExpression)]) extends LvExpression
 }

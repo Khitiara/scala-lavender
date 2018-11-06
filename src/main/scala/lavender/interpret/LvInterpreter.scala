@@ -71,6 +71,10 @@ class LvInterpreter {
         foldArgs(argV ++ cap).map(_.toArray).map(env.nativeFuncs(name)).flatMap(interpretCall(_, parameters, capture, env))
       case LvDecl(code, name, arity) =>
         Eval.now(LvFunc(ByCode(name.getOrElse(anonFunctionName()), code, arity, parameters ++ capture)))
+      case LvGuard(values) =>
+        values.findM(v => interpretCall(v._1, parameters, capture, env).map(stdlib.toBool))
+          .map(_.toRight(LvInterpreterException("Match error!")).toTry.get)
+          .flatMap(v => interpretCall(v._2, parameters, capture, env))
     }
   }
 }
