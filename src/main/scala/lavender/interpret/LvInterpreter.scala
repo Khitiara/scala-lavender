@@ -19,7 +19,7 @@ class LvInterpreter {
     * @param expr the [[LvExpression]] to interpret
     * @return A reader monad which represents the act of interpreting this expression with an arbitrary [[LvEnvironment]]
     */
-  def trace(expr: LvExpression): Unravel[LvObject] = Reader(interpretCall(expr, IndexedSeq.empty, IndexedSeq.empty, _).value)
+  def trace(expr: LvExpression): Repl[LvObject] = Repl.read(interpretCall(expr, IndexedSeq.empty, IndexedSeq.empty, _).value)
 
   /**
     * Shortcut for [[trace]]ing a function call, created at this time
@@ -34,7 +34,7 @@ class LvInterpreter {
   def traceCall[A](fun: LvFunctionHandle, args: LvExpression*)(post: LvObject => A)(env: LvEnvironment): A = {
     if (args.length != fun.arity)
       throw LvInterpreterException("Invalid arity for function called by native code")
-    trace(LvCall(fun, args.toIndexedSeq)).map(post).run(env)
+    trace(LvCall(fun, args.toIndexedSeq)).map(post).run(env).unsafeRunSync()._2
   }
 
 

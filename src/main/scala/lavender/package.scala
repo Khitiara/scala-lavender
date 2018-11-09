@@ -1,4 +1,5 @@
-import cats.data.Reader
+import cats.data.StateT
+import cats.effect.IO
 import lavender.expr.{LvExpression, LvLiteral}
 import lavender.repr.{LvFunctionHandle, LvObject}
 import lavender.util.SnowflakeType
@@ -20,9 +21,18 @@ package object lavender {
 
   implicit def wrap(f: LvNativeFunc1): LvNativeFunc = f.andThen(LvLiteral)
 
-  type Unravel[A] = Reader[LvEnvironment, A]
+  type Repl[A] = StateT[IO, LvEnvironment, A]
 
-  def getFunc(name: FunctionName): Unravel[Option[LvFunctionHandle]] = Reader(_.lvFuncs.get(name))
+  object Repl {
+    def get: Repl[LvEnvironment] = StateT.get
+    def read[A](f: LvEnvironment => A): Repl[A] = get.map(f)
+    def pure[A](f: => A): Repl[A] = StateT.pure(f)
+    def run[A](f: Repl[A], env: LvEnvironment): A = f.runA(env).unsafeRunSync()
+    def void: Repl[Unit] = pure(Unit)
+    def throws[A](throwable: Throwable): Repl[A] = pure(throw throwable)
+  }
 
-  def getNative(name: FunctionName): Unravel[Option[LvNativeFunc]] = Reader(_.nativeFuncs.get(name))
+  def getFunc(name: FunctionName): Repl[Option[LvFunctionHandle]] = Repl.read(_.lvFuncs.get(name))
+
+  def getNative(name: FunctionName): Repl[Option[LvNativeFunc]] = Repl.read(_.nativeFuncs.get(name))
 }

@@ -63,20 +63,26 @@ class Parser(source: InputStream) {
   @tailrec
   private final def doRead(): Unit = state match {
     case ReadDecl =>
-      curCapNames = curArgNames ++ curCapNames
-      require_(TokenType.IDENT, "def", pull = false)
-      curFunName = require(TokenType.IDENT) :: curFunName
+      Option(head) match {
+        case Some(Token("@", TokenType.LITERAL)) =>
+          // Command
+          val parserCmd = require(TokenType.LITERAL)
+        case _ =>
+          curCapNames = curArgNames ++ curCapNames
+          require_(TokenType.IDENT, "def", pull = false)
+          curFunName = require(TokenType.IDENT) :: curFunName
+          require_(TokenType.LITERAL, "(")
+          while (next().exists(_.tokenType == TokenType.IDENT)) {
+            curArgNames
+          }
+          require_(TokenType.LITERAL, ")", pull = false)
+          require_(TokenType.SYMBOL, "=>")
+          curArity = curArgNames.length :: curArity
 
-      while (next().exists(_.tokenType == TokenType.IDENT)) {
-        curArgNames
+          state = ReadImpl
+          next()
+          doRead()
       }
-      require_(TokenType.SYMBOL, "=>", pull = false)
-      curArity = curArgNames.length :: curArity
-
-      state = ReadImpl
-      next()
-      doRead()
-
     case ReadImpl =>
 
   }

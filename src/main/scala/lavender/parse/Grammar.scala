@@ -3,13 +3,13 @@ package lavender.parse
 import java.io.InputStream
 
 import atto.Atto._
-import cats.effect.IO
+import cats.effect.LiftIO
 import cats.implicits._
 import lavender.expr._
 import lavender.repr._
 import lavender.util.feedStream
 
-import scala.language.implicitConversions
+import scala.language.{higherKinds, implicitConversions}
 
 object Grammar {
   // -------------------------------------------------------------------------------------------------------------------
@@ -84,9 +84,9 @@ object Grammar {
   val comment: atto.Parser[Unit] = char('\'') ~> consumeLine.void
   val pull: atto.Parser[LvParseBlock] = (comment | whiteSpaceLine.void) >| CommentOrBlank
 
-  val blockParser: atto.Parser[LvParseBlock] = interpCommand | expr.map[LvParseBlock](ParsedExpression) | pull
+  val blockParser: atto.Parser[LvParseBlock] = interpCommand | expr.map(ParsedExpression) | pull
 }
 
 class GrammarParser(source: InputStream) {
-  def run: IO[List[Grammar.LvParseBlock]] = feedStream(Grammar.blockParser, source)
+  def run[F[_] : LiftIO]: F[List[Grammar.LvParseBlock]] = LiftIO[F].liftIO(feedStream(Grammar.blockParser, source))
 }
